@@ -1,0 +1,103 @@
+import { ActionIcon, Badge, Box, LoadingOverlay, Space, Title, Tooltip } from '@mantine/core';
+import { useEffect, useState } from 'react';
+import { BsPlusLg } from "react-icons/bs";
+import { useNavigate, useParams } from 'react-router-dom';
+import ServiceRow from '../../components/NFRegex/ServiceRow';
+import { nfregexServiceQuery } from '../../components/NFRegex/utils';
+import { errorNotify, getErrorMessage, isMediumScreen } from '../../js/utils';
+import AddEditService from '../../components/NFRegex/AddEditService';
+import AddNewRegex from '../../components/AddNewRegex';
+import { useQueryClient } from '@tanstack/react-query';
+import { TbReload } from 'react-icons/tb';
+
+function NFRegex({ children }: { children: any }) {
+    const navigator = useNavigate();
+    const [open, setOpen] = useState(false);
+    const { srv } = useParams();
+    const queryClient = useQueryClient();
+    const [tooltipRefreshOpened, setTooltipRefreshOpened] = useState(false);
+    const [tooltipAddServOpened, setTooltipAddServOpened] = useState(false);
+    const [tooltipAddOpened, setTooltipAddOpened] = useState(false);
+    const isMedium = isMediumScreen();
+    const services = nfregexServiceQuery();
+
+    useEffect(() => {
+        if (services.isError)
+            errorNotify("Ошибка обновления NFRegex!", getErrorMessage(services.error));
+    }, [services.isError]);
+
+    const closeModal = () => { setOpen(false); };
+
+    return <>
+        <Space h="sm" />
+        <Box className={isMedium ? 'center-flex' : 'center-flex-row'}>
+            <Title order={4}>Настройки сетевого фильтра</Title>
+            {isMedium ? <Box className='flex-spacer' /> : <Space h="sm" />}
+            <Box className='center-flex'>
+                <Badge size="sm" color="green" variant="filled" radius="xs">Сервисы: {services.isLoading ? 0 : services.data?.length}</Badge>
+                <Space w="xs" />
+                <Badge size="sm" color="yellow" variant="filled" radius="xs">Фильтрованные соединения: {services.isLoading ? 0 : services.data?.reduce((acc, s) => acc += s.n_packets, 0)}</Badge>
+                <Space w="xs" />
+                <Badge size="sm" color="violet" variant="filled" radius="xs">Регулярные выражения: {services.isLoading ? 0 : services.data?.reduce((acc, s) => acc += s.n_regex, 0)}</Badge>
+                <Space w="xs" />
+            </Box>
+            {isMedium ? null : <Space h="md" />}
+            <Box className='center-flex'>
+                {srv ?
+                    <Tooltip label="Добавить новое регулярное выражение" position='bottom' color="blue" opened={tooltipAddOpened}>
+                        <ActionIcon color="blue" onClick={() => setOpen(true)} size="lg" radius="xs" variant="filled"
+                                    onFocus={() => setTooltipAddOpened(false)} onBlur={() => setTooltipAddOpened(false)}
+                                    onMouseEnter={() => setTooltipAddOpened(true)} onMouseLeave={() => setTooltipAddOpened(false)}>
+                            <BsPlusLg size={18} />
+                        </ActionIcon>
+                    </Tooltip>
+                    :
+                    <Tooltip label="Добавить новый сервис" position='bottom' color="blue" opened={tooltipAddOpened}>
+                        <ActionIcon color="blue" onClick={() => setOpen(true)} size="lg" radius="xs" variant="filled"
+                                    onFocus={() => setTooltipAddOpened(false)} onBlur={() => setTooltipAddOpened(false)}
+                                    onMouseEnter={() => setTooltipAddOpened(true)} onMouseLeave={() => setTooltipAddOpened(false)}>
+                            <BsPlusLg size={18} />
+                        </ActionIcon>
+                    </Tooltip>
+                }
+                <Space w="xs" />
+                <Tooltip label="Обновить" position='bottom' color="indigo" opened={tooltipRefreshOpened}>
+                    <ActionIcon color="indigo" onClick={() => queryClient.invalidateQueries(["nfregex"])} size="lg" radius="xs" variant="filled"
+                                loading={services.isFetching}
+                                onFocus={() => setTooltipRefreshOpened(false)} onBlur={() => setTooltipRefreshOpened(false)}
+                                onMouseEnter={() => setTooltipRefreshOpened(true)} onMouseLeave={() => setTooltipRefreshOpened(false)}>
+                        <TbReload size={18} />
+                    </ActionIcon>
+                </Tooltip>
+            </Box>
+        </Box>
+        <Space h="md" />
+        <Box className="center-flex-row" style={{ gap: 20 }}>
+            {srv ? null : <>
+                <LoadingOverlay visible={services.isLoading} />
+                {(services.data && services.data?.length > 0) ? services.data.map(srv => <ServiceRow service={srv} key={srv.service_id} onClick={() => {
+                    navigator("/nfregex/" + srv.service_id);
+                }} />) : <>
+                    <Space h="xl" />
+                    <Title className='center-flex' style={{ textAlign: "center" }} order={3}>Сервисы не найдены! Добавьте новый, нажав на кнопку "+"</Title>
+                    <Box className='center-flex'>
+                        <Tooltip label="Добавить новый сервис" color="blue" opened={tooltipAddServOpened}>
+                            <ActionIcon color="blue" onClick={() => setOpen(true)} size="xl" radius="xs" variant="filled"
+                                        onFocus={() => setTooltipAddServOpened(false)} onBlur={() => setTooltipAddServOpened(false)}
+                                        onMouseEnter={() => setTooltipAddServOpened(true)} onMouseLeave={() => setTooltipAddServOpened(false)}>
+                                <BsPlusLg size="20px" />
+                            </ActionIcon>
+                        </Tooltip>
+                    </Box>
+                </>}
+            </>}
+        </Box>
+        {srv ? children : null}
+        {srv ?
+            <AddNewRegex opened={open} onClose={closeModal} service={srv} /> :
+            <AddEditService opened={open} onClose={closeModal} />
+        }
+    </>;
+}
+
+export default NFRegex;

@@ -1,0 +1,8 @@
+fastapi[all]
+httpx
+uvicorn[standard]
+passlib[bcrypt]
+psutil
+python-jose[cryptography]
+python-socketio
+#git+https://salsa.debian.org/pkg-netfilter-team/pkg-nftables#egg=nftables&subdirectory=py
